@@ -1,0 +1,13 @@
+io\smallrye\reactive\messaging\rabbitmq\ConsumerHandler.class
+io\smallrye\reactive\messaging\rabbitmq\RabbitMQHelper.class
+io\smallrye\reactive\messaging\rabbitmq\RabbitMQConnector.class
+io\smallrye\reactive\messaging\rabbitmq\RabbitMQConnectorCommonConfiguration.class
+META-INF\connector\smallrye-rabbitmq-outgoing.adoc
+com\text\TestResource.class
+io\smallrye\reactive\messaging\rabbitmq\connector\RabbitMQConnectorConfig.class
+io\smallrye\reactive\messaging\rabbitmq\RabbitMQConnector$1.class
+io\smallrye\reactive\messaging\rabbitmq\RabbitMQConnectorIncomingConfiguration.class
+com\text\TestService.class
+io\smallrye\reactive\messaging\rabbitmq\RabbitMQConnectorOutgoingConfiguration.class
+META-INF\connector\smallrye-rabbitmq-incoming.adoc
+io\smallrye\reactive\messaging\rabbitmq\i18n\RabbitMQLogger.class
