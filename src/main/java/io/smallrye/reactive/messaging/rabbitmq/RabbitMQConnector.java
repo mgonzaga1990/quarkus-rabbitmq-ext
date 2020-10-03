@@ -5,11 +5,10 @@ import io.smallrye.mutiny.Uni;
 import io.smallrye.reactive.messaging.annotations.ConnectorAttribute;
 import io.smallrye.reactive.messaging.connectors.ExecutionHolder;
 import io.smallrye.reactive.messaging.rabbitmq.connector.RabbitMQConnectorConfig;
-import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.mutiny.core.Vertx;
 import io.vertx.rabbitmq.RabbitMQClient;
-import io.vertx.rabbitmq.RabbitMQConsumer;
+import io.vertx.rabbitmq.RabbitMQMessage;
 import io.vertx.rabbitmq.impl.RabbitMQClientImpl;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.reactive.messaging.Message;
@@ -34,16 +33,11 @@ import static io.smallrye.reactive.messaging.rabbitmq.RabbitMQHelper.queueDeclar
 @ApplicationScoped
 @Connector(RabbitMQConnector.CONNECTOR_NAME)
 
+//connection related attribute
 @ConnectorAttribute(name = "username", direction = INCOMING_AND_OUTGOING, description = "The username used to authenticate to the broker", type = "string", alias = "rabbitmq-username",defaultValue = "guest")
 @ConnectorAttribute(name = "password", direction = INCOMING_AND_OUTGOING, description = "The password used to authenticate to the broker", type = "string", alias = "rabbitmq-password",defaultValue = "guest")
 @ConnectorAttribute(name = "host", direction = INCOMING_AND_OUTGOING, description = "The broker hostname", type = "string", alias = "rabbitmq-host", defaultValue = "localhost")
 @ConnectorAttribute(name = "url", direction = INCOMING_AND_OUTGOING, description = "The broker uri", type = "string", alias = "rabbitmq-url")
-
-@ConnectorAttribute(name = "queue", direction = INCOMING_AND_OUTGOING, description = "", type = "string")
-
-
-@ConnectorAttribute(name = "port", direction = INCOMING_AND_OUTGOING, description = "The broker port", type = "int", alias = "rabbitmq-port", defaultValue = "5672")
-@ConnectorAttribute(name = "virtual-host", direction = INCOMING_AND_OUTGOING, description = "A comma separated virtualhost(s)", type = "string", alias = "rabbitmq-virtual-host")
 
 @ConnectorAttribute(name = "connection-retry", direction = INCOMING_AND_OUTGOING, description = "The number of reconnection attempts", type = "int", alias = "rabbitmq-connection-timeout", defaultValue = "2")
 @ConnectorAttribute(name = "connection-timeout", direction = INCOMING_AND_OUTGOING, description = "", type = "int", alias = "rabbitmq-reconnect-attempts", defaultValue = "50000")
@@ -52,6 +46,13 @@ import static io.smallrye.reactive.messaging.rabbitmq.RabbitMQHelper.queueDeclar
 @ConnectorAttribute(name = "requested-channel-max", direction = INCOMING_AND_OUTGOING, description = "", type = "int", alias = "rabbitmq-requested-channel-max", defaultValue = "2047")
 @ConnectorAttribute(name = "network-recovery-interval", direction = INCOMING_AND_OUTGOING, description = "", type = "int", alias = "rabbitmq-network-recovery-interval", defaultValue = "500")
 @ConnectorAttribute(name = "automatic-recovery", direction = INCOMING_AND_OUTGOING, description = "", type = "boolean", alias = "rabbitmq-automatic-recovery", defaultValue = "true")
+
+//queue related attribute
+@ConnectorAttribute(name = "queue", direction = INCOMING_AND_OUTGOING, description = "", type = "string")
+@ConnectorAttribute(name = "auto-create-queue", direction = INCOMING_AND_OUTGOING, description = "", type = "boolean", mandatory = true)
+
+@ConnectorAttribute(name = "port", direction = INCOMING_AND_OUTGOING, description = "The broker port", type = "int", alias = "rabbitmq-port", defaultValue = "5672")
+@ConnectorAttribute(name = "virtual-host", direction = INCOMING_AND_OUTGOING, description = "A comma separated virtualhost(s)", type = "string", alias = "rabbitmq-virtual-host")
 
 public final class RabbitMQConnector extends RabbitMQConnectorConfig implements IncomingConnectorFactory,OutgoingConnectorFactory {
 
@@ -62,25 +63,21 @@ public final class RabbitMQConnector extends RabbitMQConnectorConfig implements 
     private ExecutionHolder executionHolder;
 
     @Override
-    public PublisherBuilder<? extends Message<?>> getPublisherBuilder(Config config) {
+    public PublisherBuilder<? extends Message<RabbitMQMessage>> getPublisherBuilder(Config config) {
         final RabbitMQConnectorIncomingConfiguration ic = new RabbitMQConnectorIncomingConfiguration(config);
         final String queueOrChannel = ic.getQueue().orElse(ic.getChannel());
 
-        final Multi<Message<String>> publisher = Multi.createFrom().emitter(emitter -> {
+        final Multi<RabbitMQVMessage<RabbitMQMessage>> publisher = Multi.createFrom().emitter(emitter -> {
             connection(this.vertx().getDelegate(),ic, queueOrChannel, emitter,(channel, e, client) -> {
-                {
-                    client.basicConsumer(queueOrChannel, rabbitMQConsumerAsyncResult -> {
-                        if (rabbitMQConsumerAsyncResult.succeeded()) {
-                            log.info("RabbitMQ consumer created !");
-                            RabbitMQConsumer mqConsumer = rabbitMQConsumerAsyncResult.result();
-                            mqConsumer.handler(message -> {
-                                e.emit(Message.of(message.body().toString()));
-                            });
-                        } else {
-                            e.fail(rabbitMQConsumerAsyncResult.cause());
-                        }
-                    });
-                }
+                client.basicConsumer(queueOrChannel, rabbitMQConsumerAsyncResult -> {
+                    if (rabbitMQConsumerAsyncResult.succeeded()) {
+                        rabbitMQConsumerAsyncResult.result()
+                                .handler(message -> e.emit(new RabbitMQVMessage<>(message,client)));
+
+                    } else {
+                        e.fail(rabbitMQConsumerAsyncResult.cause());
+                    }
+                });
             });
         });
 
@@ -99,7 +96,9 @@ public final class RabbitMQConnector extends RabbitMQConnectorConfig implements 
         client.start(voidAsyncResult -> {
             if (voidAsyncResult.succeeded()) {
                 //flag to create queue if not exists
-                queueDeclareWithConfig(client, queueOrChannel);
+                if(oc.getAutoCreateQueue()){
+                    queueDeclareWithConfig(client, queueOrChannel);
+                }
                 Uni.createFrom().publisher(rabbitMQSender.broadcastProcessor()) .subscribe().with(payload ->{
                     final String payloadData = payload.getPayload();
                     log.info("Data received " + payloadData);
