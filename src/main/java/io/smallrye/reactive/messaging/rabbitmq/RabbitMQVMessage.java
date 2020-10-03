@@ -36,9 +36,13 @@ public class RabbitMQVMessage<T extends RabbitMQMessage> implements Message<T> {
                 if(asyncResult.succeeded()){
                     log.info("ack successfully");
                 }else{
-                    this.nack(asyncResult.cause());
+                    asyncResult.cause().printStackTrace();
+                    //this.nack(asyncResult.cause());
                 }
             });
+
+            log.info("connection status " + mqClient.isConnected());
+            log.info("channel status " + mqClient.isOpenChannel());
             return (Void) null;
         });
         return ack;

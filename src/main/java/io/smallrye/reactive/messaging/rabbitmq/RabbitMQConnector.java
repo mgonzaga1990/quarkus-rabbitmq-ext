@@ -7,6 +7,7 @@ import io.smallrye.reactive.messaging.connectors.ExecutionHolder;
 import io.smallrye.reactive.messaging.rabbitmq.connector.RabbitMQConnectorConfig;
 import io.vertx.core.json.JsonObject;
 import io.vertx.mutiny.core.Vertx;
+import io.vertx.rabbitmq.QueueOptions;
 import io.vertx.rabbitmq.RabbitMQClient;
 import io.vertx.rabbitmq.RabbitMQMessage;
 import io.vertx.rabbitmq.impl.RabbitMQClientImpl;
@@ -69,11 +70,10 @@ public final class RabbitMQConnector extends RabbitMQConnectorConfig implements 
 
         final Multi<RabbitMQVMessage<RabbitMQMessage>> publisher = Multi.createFrom().emitter(emitter -> {
             connection(this.vertx().getDelegate(),ic, queueOrChannel, emitter,(channel, e, client) -> {
-                client.basicConsumer(queueOrChannel, rabbitMQConsumerAsyncResult -> {
+                client.basicConsumer(queueOrChannel,new QueueOptions().setAutoAck(false), rabbitMQConsumerAsyncResult -> {
                     if (rabbitMQConsumerAsyncResult.succeeded()) {
                         rabbitMQConsumerAsyncResult.result()
                                 .handler(message -> e.emit(new RabbitMQVMessage<>(message,client)));
-
                     } else {
                         e.fail(rabbitMQConsumerAsyncResult.cause());
                     }
