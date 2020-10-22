@@ -1,9 +1,13 @@
 package io.smallrye.reactive.messaging.rabbitmq;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.smallrye.mutiny.Uni;
+import io.smallrye.mutiny.operators.multi.processors.BroadcastProcessor;
 import io.smallrye.reactive.messaging.rabbitmq.connector.RabbitMQSender;
 import io.vertx.core.json.JsonObject;
 import io.vertx.rabbitmq.RabbitMQClient;
+import org.eclipse.microprofile.reactive.messaging.Message;
 
 import java.util.Optional;
 import java.util.logging.Logger;
@@ -36,6 +40,7 @@ public class RabbitMQExchange {
         //declare exchange
         final String routingKey = config.getRoutingKey().orElse("default-key");
         final String exchange = exchangeOption.get();
+
         client.exchangeDeclare(exchange, config.getExchangeType(), config.getDurable(), config.getAutoDelete(), jsonObject, onResult -> {
             if (!onResult.succeeded()) {
                 log.severe("Failed to declare exchange! " + onResult.cause().getMessage());
@@ -52,15 +57,17 @@ public class RabbitMQExchange {
                         //bind exchange to queue
                         client.queueBind(queueOrChannel,exchange, routingKey, bindResult->{
                             if(!bindResult.succeeded()){
-                                log.severe("Queue binding to exchange failed! " + bindResult.cause().getMessage());
+                                log.severe("Queue and Exchange binding failed! " + bindResult.cause().getMessage());
                             }else{
                                 //listen to the client publisher
-                                Uni.createFrom().item(rabbitMQSender.broadcastProcessor())
-                                        .subscribe().with(payload -> {
+                                final JsonObject jsonConfig = new JsonObject()
+                                        .put("contentType",config.getContentType());
+                                final BroadcastProcessor broadcastProcessor = rabbitMQSender.broadcastProcessor();
+                                Uni.createFrom().item(broadcastProcessor).subscribe().with(payload -> {
                                     payload.subscribe().with(message -> {
-                                        JsonObject msg = new JsonObject()
-                                                .put("body", String.valueOf(message.getPayload()))
-                                                .put("contentType",config.getContentType());
+                                        final JsonObject msg = new JsonObject()
+                                                .put("properties",jsonConfig)
+                                                .put("body", JsonObject.mapFrom(((Message)message).getPayload()));
                                         client.basicPublish(exchange,routingKey,msg,r1->{
                                             if(r1.succeeded()){
                                                 log.info("Message sent");
@@ -70,6 +77,7 @@ public class RabbitMQExchange {
                                         });
                                     });
                                 });
+
                             }
                         });
                     }
