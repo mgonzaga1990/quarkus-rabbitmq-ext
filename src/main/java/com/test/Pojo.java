@@ -4,6 +4,8 @@ public class Pojo {
     private Integer id;
     private String name;
 
+    public Pojo(){}
+
     public Pojo(Integer id, String name) {
         this.id = id;
         this.name = name;

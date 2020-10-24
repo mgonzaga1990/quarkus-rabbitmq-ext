@@ -99,8 +99,6 @@ public final class RabbitMQConnector extends RabbitMQConfiguration implements Ou
         final String queueOrChannel = ic.getQueue().orElse(ic.getChannel());
 
         final RabbitMQOptions rabbitMQOptions = configuration(ic);
-        rabbitMQOptions.setConnectionRetries(5);
-        rabbitMQOptions.setIncludeProperties(true);
 
         //configuration
         final RabbitMQClient client = RabbitMQClient.create(this.vertx().getDelegate(), rabbitMQOptions);

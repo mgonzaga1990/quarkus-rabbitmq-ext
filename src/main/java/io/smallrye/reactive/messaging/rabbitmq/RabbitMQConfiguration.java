@@ -15,6 +15,8 @@ public abstract class RabbitMQConfiguration {
                 .setPort(config.getPort())
                 .setHost(config.getHost())
                 .setUri(config.getUrl().orElse(null))
+                .setConnectionRetries(5)
+                .setIncludeProperties(true)
                 .setConnectionTimeout(config.getConnectionTimeout())
                 .setRequestedHeartbeat(config.getHeartbeat())
                 .setHandshakeTimeout(config.getHandshakeTimeout())
