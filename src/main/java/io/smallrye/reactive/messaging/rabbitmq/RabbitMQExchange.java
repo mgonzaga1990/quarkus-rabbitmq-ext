@@ -41,16 +41,16 @@ public class RabbitMQExchange {
         final String routingKey = config.getRoutingKey().orElse("default-key");
         final String exchange = exchangeOption.get();
 
-        client.exchangeDeclare(exchange, config.getExchangeType(), config.getDurable(), config.getAutoDelete(), jsonObject, onResult -> {
+        client.exchangeDeclare(exchange, config.getExchangeType(), config.getDurable(),config.getExchangeAutoDelete() , jsonObject, onResult -> {
             if (!onResult.succeeded()) {
                 onResult.cause().getMessage();
             } else {
                 //declare queue
                 final Boolean exchangeDurable = config.getExchangeDurable();
                 final Boolean exchangeExclusive = config.getExchangeExclusive();
-                final Boolean exchangeAutoDelete = config.getExchangeAutoDelete();
+                final Boolean queueAutoDelete = config.getAutoDelete();
 
-                client.queueDeclare(queueOrChannel, exchangeDurable, exchangeExclusive, exchangeAutoDelete, jsonObject, queueResult -> {
+                client.queueDeclare(queueOrChannel, exchangeDurable, exchangeExclusive, queueAutoDelete, jsonObject, queueResult -> {
                     if(!queueResult.succeeded()){
                         queueResult.cause().getMessage();
                     } else {
