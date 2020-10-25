@@ -43,6 +43,11 @@ import static io.smallrye.reactive.messaging.annotations.ConnectorAttribute.Dire
 
 //outgoing config
 @ConnectorAttribute(name = "exchange", direction = OUTGOING, description = "", type = "string")
+
+@ConnectorAttribute(name = "x-dead-letter-exchange", direction = OUTGOING, description = "", type = "string")
+@ConnectorAttribute(name = "alternate-exchange", direction = OUTGOING, description = "", type = "string")
+@ConnectorAttribute(name = "x-message-ttl", direction = OUTGOING, description = "", type = "int")
+
 @ConnectorAttribute(name = "exchange-durable", direction = OUTGOING, description = "", type = "boolean",defaultValue = "true")
 @ConnectorAttribute(name = "exchange-exclusive", direction = OUTGOING, description = "", type = "boolean",defaultValue = "false")
 @ConnectorAttribute(name = "exchange-auto-delete", direction = OUTGOING, description = "", type = "boolean",defaultValue = "true")

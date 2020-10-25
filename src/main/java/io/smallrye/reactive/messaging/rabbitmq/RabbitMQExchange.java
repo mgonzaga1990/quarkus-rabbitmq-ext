@@ -32,10 +32,10 @@ public class RabbitMQExchange {
 
         log.info("Configuring exchange. . . ");
 
-        final JsonObject jsonObject = new JsonObject()
-                .put("x-dead-letter-exchange", "my.deadletter.exchange")
-                .put("alternate-exchange", "my.alternate.exchange")
-                .put("x-message-ttl", 10_000L);
+        final JsonObject jsonObject = new JsonObject();
+        if(config.getXDeadLetterExchange().isPresent()) jsonObject.put("x-dead-letter-exchange",config.getXDeadLetterExchange().get());
+        if(config.getAlternateExchange().isPresent()) jsonObject.put("alternate-exchange",config.getAlternateExchange().get());
+        if(config.getXMessageTtl().isPresent()) jsonObject.put("x-message-ttl",config.getXMessageTtl().get());
 
         //declare exchange
         final String routingKey = config.getRoutingKey().orElse("default-key");
@@ -43,7 +43,7 @@ public class RabbitMQExchange {
 
         client.exchangeDeclare(exchange, config.getExchangeType(), config.getDurable(), config.getAutoDelete(), jsonObject, onResult -> {
             if (!onResult.succeeded()) {
-                log.severe("Failed to declare exchange! " + onResult.cause().getMessage());
+                onResult.cause().getMessage();
             } else {
                 //declare queue
                 final Boolean exchangeDurable = config.getExchangeDurable();
@@ -52,7 +52,7 @@ public class RabbitMQExchange {
 
                 client.queueDeclare(queueOrChannel, exchangeDurable, exchangeExclusive, exchangeAutoDelete, jsonObject, queueResult -> {
                     if(!queueResult.succeeded()){
-                        log.severe("Queue failed to be declared! " + queueResult.cause().getMessage());
+                        queueResult.cause().getMessage();
                     } else {
                         //bind exchange to queue
                         client.queueBind(queueOrChannel,exchange, routingKey, bindResult->{
