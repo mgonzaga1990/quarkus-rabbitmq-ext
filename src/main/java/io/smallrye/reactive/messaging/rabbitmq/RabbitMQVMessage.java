@@ -17,7 +17,11 @@ public class RabbitMQVMessage<T extends RabbitMQMessage> implements Message<T> {
     private RabbitMQMessage mqMessage;
     private RabbitMQClient mqClient;
 
-    RabbitMQVMessage(RabbitMQMessage message, RabbitMQClient client){
+    private boolean isAck = false;
+
+    public boolean isAck(){return this.isAck;}
+
+    public RabbitMQVMessage(RabbitMQMessage message, RabbitMQClient client){
         this.mqMessage = message;
         this.mqClient = client;
     }
@@ -34,6 +38,7 @@ public class RabbitMQVMessage<T extends RabbitMQMessage> implements Message<T> {
             this.mqClient.basicAck(deliveryTag, false, asyncResult -> {
                 if(asyncResult.succeeded()){
                     log.info("ack successfully");
+                    this.isAck = true;
                 }else{
                     asyncResult.cause().printStackTrace();
                     //this.nack(asyncResult.cause());
