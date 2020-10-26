@@ -1,5 +1,6 @@
-package io.smallrye.reactive.messaging.rabbitmq;
+package io.smallrye.reactive.messaging.rabbitmq.connector;
 
+import com.test.Pojo;
 import io.smallrye.mutiny.operators.multi.processors.BroadcastProcessor;
 import org.eclipse.microprofile.reactive.messaging.Message;
 import org.reactivestreams.Subscriber;
@@ -7,22 +8,21 @@ import org.reactivestreams.Subscription;
 
 import java.util.logging.Logger;
 
-public class RabbitMQSender implements Subscriber<Message<String>>{
-
+public class RabbitMQSender<T> implements Subscriber<T> {
     private static final Logger log = Logger.getLogger(RabbitMQSender.class.getName());
 
     private Subscription subscription;
-    private BroadcastProcessor<Message<String>> broadcastProcessor;
+    private BroadcastProcessor<T> broadcastProcessor;
 
     RabbitMQSender(){
         this.broadcastProcessor = BroadcastProcessor.create();
     }
 
-    static RabbitMQSender create(){
+    public static RabbitMQSender create(){
         return new RabbitMQSender();
     }
 
-    public BroadcastProcessor<Message<String>> broadcastProcessor(){
+    public BroadcastProcessor<T> broadcastProcessor(){
         return this.broadcastProcessor;
     }
 
@@ -33,7 +33,7 @@ public class RabbitMQSender implements Subscriber<Message<String>>{
     }
 
     @Override
-    public void onNext(Message<String> payload) {
+    public void onNext(T payload) {
         this.broadcastProcessor.onNext(payload);
         this.subscription.request(1);
     }
